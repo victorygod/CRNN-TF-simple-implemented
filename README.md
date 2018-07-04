@@ -19,10 +19,10 @@ The image files and the label files should have the same name. The label file is
   bottom,left,right,top,value
   
 Example label file:
-  bottom,left,right,top,value
-  109,137,342,59,中信银行
-  118,1110,1206,69,账单
-  239,50,172,217,科目： 20102
+*  bottom,left,right,top,value
+*  109,137,342,59,中信银行
+*  118,1110,1206,69,账单
+*  239,50,172,217,科目： 20102
   
 Put the image files and the label files in data/ dir
 
