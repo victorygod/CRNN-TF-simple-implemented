@@ -12,7 +12,7 @@ Inspired by (&copied) https://github.com/Belval/CRNN and https://github.com/wats
 *  scipy
 *  numpy
   
-Annaconda Recommonded.
+Anaconda Recommonded.
 
 ## Data prepare
 The image files and the label files should have the same name. The label file is a csv file with the format in each line like this:
