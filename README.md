@@ -29,6 +29,8 @@ Put the image files and the label files in train/ dir
 
 To run the inference procedure, put the image files and the annotation files in val/ dir. The annotation file should have the same format with the label file, except that there is no value entry at the end of each line.
 
-## Train the model
+## Run the model
 
 Simply run python3 main.py
+
+In the main.py file, you can choose which mode to use, either "train" or "infer". Just modify the code.
