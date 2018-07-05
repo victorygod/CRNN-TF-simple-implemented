@@ -3,7 +3,7 @@ import numpy as np
 import os, utils
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
-activation = tf.nn.leaky_relu
+activation = lambda x: tf.nn.leaky_relu(x, 0.01)
 
 class CRNN:
 	def __init__(self):
@@ -15,40 +15,40 @@ class CRNN:
 		self.loss = None
 		self.train_op = None
 		self.accuracy = None
-		self.build()
 
-	def build(self):
+	def build(self, mode="train"):
+		is_training = mode == "train"
 		with tf.variable_scope("CNN"):
 			net = tf.layers.conv2d(self.inputs, name = "conv1_1", filters = 64, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
+			net = tf.layers.batch_normalization(net, training = is_training)
 			net = activation(net)
-			net = tf.layers.conv2d(net, name = "conv1_2", filters = 64, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
-			net = activation(net)
+			# net = tf.layers.conv2d(net, name = "conv1_2", filters = 64, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
+			# net = tf.layers.batch_normalization(net, training = is_training)
+			# net = activation(net)
 			net = tf.layers.max_pooling2d(net, pool_size = 2, strides = 2, padding = "SAME")
 			
 			net = tf.layers.conv2d(net, name = "conv2_1", filters = 128, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
+			net = tf.layers.batch_normalization(net, training = is_training)
 			net = activation(net)
-			net = tf.layers.conv2d(net, name = "conv2_2", filters = 128, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
-			net = activation(net)
+			# net = tf.layers.conv2d(net, name = "conv2_2", filters = 128, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
+			# net = tf.layers.batch_normalization(net, training = is_training)
+			# net = activation(net)
 			net = tf.layers.max_pooling2d(net, pool_size = 2, strides = 2, padding = "SAME")
 
 			net = tf.layers.conv2d(net, name = "conv3_1", filters = 256, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
+			net = tf.layers.batch_normalization(net, training = is_training)
 			net = activation(net)
-			net = tf.layers.conv2d(net, name = "conv3_2", filters = 256, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
-			net = activation(net)
+			# net = tf.layers.conv2d(net, name = "conv3_2", filters = 256, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
+			# net = tf.layers.batch_normalization(net, training = is_training)
+			# net = activation(net)
 			net = tf.layers.max_pooling2d(net, pool_size = 2, strides = 2, padding = "SAME")
 
 			net = tf.layers.conv2d(net, name = "conv4_1", filters = 512, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
+			net = tf.layers.batch_normalization(net, training = is_training)
 			net = activation(net)
-			net = tf.layers.conv2d(net, name = "conv4_2", filters = 512, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
-			net = tf.layers.batch_normalization(net, training = True)
-			net = activation(net)
+			# net = tf.layers.conv2d(net, name = "conv4_2", filters = 512, kernel_size = 5, strides = (1,1), padding = "same", activation = None)
+			# net = tf.layers.batch_normalization(net, training = is_training)
+			# net = activation(net)
 			net = tf.layers.max_pooling2d(net, pool_size = 2, strides = 2, padding = "SAME")
 
 			net = tf.layers.conv2d(net, name = "conv5_1", filters = 512, kernel_size = 4, strides = (1, 1), padding = "valid", activation = activation)
@@ -81,19 +81,21 @@ class CRNN:
 			self.dense_decoded = tf.sparse_tensor_to_dense(decoded[0], default_value = -1)
 
 			self.global_step = tf.train.get_or_create_global_step()
-			loss = tf.nn.ctc_loss(self.labels, net, seq_len)
+			loss = tf.nn.ctc_loss(labels = self.labels, inputs = net, sequence_length = seq_len)
 			self.loss = tf.reduce_mean(loss)
-			self.train_op = tf.train.AdamOptimizer(0.0001).minimize(loss, global_step=self.global_step)
+			with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+				self.train_op = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2 = 0.999).minimize(loss, global_step=self.global_step)
 			self.accuracy = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32), self.labels))
 
 			tf.summary.scalar('loss', self.loss)
 			self.merged_summay = tf.summary.merge_all()
 			
 	def train(self, src):
+		self.build(mode = "train")
 		data_loader = utils.DataLoader(src)
 		with tf.Session() as sess:
 			sess.run(tf.global_variables_initializer())
-			saver = tf.train.Saver(max_to_keep=1)
+			saver = tf.train.Saver(tf.global_variables() ,max_to_keep=1)
 			train_writer = tf.summary.FileWriter('summary_ckpt/', sess.graph)
 			ckpt = tf.train.latest_checkpoint(utils.checkpoint_dir)
 			if ckpt:
@@ -135,3 +137,32 @@ class CRNN:
 					saver.save(sess, os.path.join(utils.checkpoint_dir, 'ocr-model'), global_step=step)
 
 			saver.save(sess, os.path.join(utils.checkpoint_dir, 'ocr-model'), global_step=step)
+
+	def infer(self, src):
+		self.build(mode = "infer")
+		data_loader = utils.DataLoader(src)
+		with tf.Session() as sess:
+			sess.run(tf.global_variables_initializer())
+			saver = tf.train.Saver(tf.global_variables() ,max_to_keep=1)
+			train_writer = tf.summary.FileWriter('summary_ckpt/', sess.graph)
+			ckpt = tf.train.latest_checkpoint(utils.checkpoint_dir)
+			if ckpt:
+				saver.restore(sess, ckpt)
+				print('restore from checkpoint{0}'.format(ckpt))
+			print('=============================begin infer=============================')
+			train_cost = 0
+			last_step = 0
+			while data_loader.epoch<1:
+				batch_inputs = data_loader.get_imgs(self.batch_size)
+				
+				feed_dict = {self.inputs: batch_inputs}
+				decoded = sess.run(self.dense_decoded, feed_dict)
+
+				print(decoded)
+				with open("result.txt", "a") as f:
+					for s in decoded:
+						for c in s:
+							if c>0:
+								f.write(utils.decode_maps[c])
+						f.write("\n")
+					
