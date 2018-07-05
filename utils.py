@@ -512,8 +512,9 @@ class DataLoader:
 
 			line = lines[self.label_cursor]
 			row = line.strip().split(',')
+			words = ",".join(row[4:])
 			sub_im = im[int(row[3]):int(row[0]), int(row[1]):int(row[2])]
-			if not(sub_im.shape[0]==0 or sub_im.shape[1]==0 or invalid(row[4]) or len(row[4])>75): 
+			if not(sub_im.shape[0]==0 or sub_im.shape[1]==0 or invalid(words) or len(words)>75): 
 				rated_w = int(image_height/sub_im.shape[0]*sub_im.shape[1])
 				if rated_w<image_width:
 					sub_im = misc.imresize(sub_im, (image_height, rated_w))
@@ -523,7 +524,7 @@ class DataLoader:
 				else:
 					sub_im = misc.imresize(sub_im, (image_height, image_width))
 				sub_im = np.reshape(sub_im, [image_height, image_width, 1])
-				code = [encode_maps[c] for c in row[4]]
+				code = [encode_maps[c] for c in words]
 				batch_inputs.append(sub_im)
 				batch_labels.append(code)
 				n-=1
@@ -541,7 +542,7 @@ class DataLoader:
 			line = lines[self.label_cursor]
 			row = line.strip().split(',')
 			sub_im = im[int(row[3]):int(row[0]), int(row[1]):int(row[2])]
-			if not(sub_im.shape[0]==0 or sub_im.shape[1]==0 or invalid(row[4])): 
+			if not(sub_im.shape[0]==0 or sub_im.shape[1]==0): 
 				rated_w = int(image_height/sub_im.shape[0]*sub_im.shape[1])
 				if rated_w<image_width:
 					sub_im = misc.imresize(sub_im, (image_height, rated_w))
@@ -551,7 +552,6 @@ class DataLoader:
 				else:
 					sub_im = misc.imresize(sub_im, (image_height, image_width))
 				sub_im = np.reshape(sub_im, [image_height, image_width, 1])
-				code = [encode_maps[c] for c in row[4]]
 				batch_inputs.append(sub_im)
 				n-=1
 			
